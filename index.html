@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我的清單（測試）</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Arial; padding: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; margin-top: 12px; }
+    code { background:#f6f6f6; padding:2px 6px; border-radius:6px; }
+    button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; }
+  </style>
+</head>
+<body>
+  <h2>📌 我的清單（LIFF 測試頁）</h2>
+  <div class="card">
+    <div>LIFF 狀態：<span id="status">初始化中…</span></div>
+    <div style="margin-top:8px">isInClient：<code id="inClient">-</code></div>
+    <div style="margin-top:8px">userId：<code id="userId">-</code></div>
+  </div>
+
+  <div class="card">
+    <button id="loginBtn" style="display:none;">登入 LINE</button>
+    <button id="closeBtn" style="display:none;">關閉頁面</button>
+  </div>
+
+  <script>
+    const LIFF_ID = "YOUR_LIFF_ID"; // ← 換成你的 LIFF ID
+
+    const $ = (id) => document.getElementById(id);
+
+    async function main() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        $("status").textContent = "✅ 初始化成功";
+        $("inClient").textContent = String(liff.isInClient());
+
+        // 如果不是在 LINE App 內開，就需要 login
+        if (!liff.isLoggedIn()) {
+          $("loginBtn").style.display = "inline-block";
+          $("loginBtn").onclick = () => liff.login();
+          $("userId").textContent = "(尚未登入)";
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        $("userId").textContent = profile.userId;
+
+        if (liff.isInClient()) {
+          $("closeBtn").style.display = "inline-block";
+          $("closeBtn").onclick = () => liff.closeWindow();
+        }
+      } catch (e) {
+        $("status").textContent = "❌ 初始化失敗";
+        console.error(e);
+        alert("LIFF 初始化失敗，請看 console");
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
