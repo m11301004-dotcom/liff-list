@@ -53,8 +53,9 @@
         }
       } catch (e) {
         $("status").textContent = "❌ 初始化失敗";
+        const msg = (e && (e.message || e.toString())) || "unknown";
+        alert("LIFF init error: " + msg);
         console.error(e);
-        alert("LIFF 初始化失敗，請看 console");
       }
     }
 
