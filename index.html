@@ -131,19 +131,23 @@
     }
 
     async function fetchList(userId) {
-      setMsg("讀取清單中…");
-      $("reloadBtn").disabled = true;
-
-      const url = `${GET_LIST_URL}?userId=${encodeURIComponent(userId)}`;
-      console.log("GET URL =", url);
-      alert("GET URL = " + url);
-
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-        },
-      });
+      const baseUrl = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list";
+    
+      // 用 query param 跳過 ngrok 警告（避免自訂 header 觸發 CORS preflight）
+      const url = `${baseUrl}?userId=${encodeURIComponent(userId)}&ngrok-skip-browser-warning=true`;
+    
+      const res = await fetch(url); // 👈 不要帶 headers
+      const text = await res.text();
+    
+      // 先用這個快速驗證：如果不是 JSON，我們會直接看到前 200 字是什麼
+      try {
+        const data = JSON.parse(text);
+        return data;
+      } catch (e) {
+        alert("不是 JSON，回傳前200字：\n" + text.slice(0, 200));
+        throw e;
+      }
+    }
 
       let data;
       try { data = await res.json(); }
@@ -223,6 +227,7 @@
   </script>
 </body>
 </html>
+
 
 
 
