@@ -3,32 +3,174 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>我的清單（測試）</title>
+  <title>我的清單</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Arial; padding: 16px; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; margin-top: 12px; }
-    code { background:#f6f6f6; padding:2px 6px; border-radius:6px; }
-    button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Arial; padding: 16px; background:#fafafa; }
+    .card { border: 1px solid #e5e5e5; border-radius: 14px; padding: 12px; margin-top: 12px; background:#fff; }
+    code { background:#f3f3f3; padding:2px 6px; border-radius:6px; }
+    button { padding:10px 12px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    button:disabled { opacity:0.6; cursor:not-allowed; }
+
+    .list { margin-top: 12px; display:flex; flex-direction:column; gap: 10px; }
+    .item {
+      display:flex; align-items: stretch; gap: 12px;
+      border: 1px solid #eee; border-radius: 14px; padding: 10px;
+      background:#fff;
+    }
+    .thumb {
+      width: 84px; height: 84px; border-radius: 12px; overflow:hidden;
+      flex: 0 0 auto; background:#f0f0f0;
+    }
+    .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .info { flex: 1 1 auto; min-width: 0; }
+    .name { font-weight: 700; font-size: 15px; line-height: 1.2; margin-bottom: 6px; }
+    .meta { font-size: 13px; color:#444; line-height:1.35; }
+    .tags { font-size: 12px; color:#777; margin-top: 6px; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+
+    .actions { display:flex; align-items:center; }
+    .trash {
+      width: 44px; height: 44px; border-radius: 12px;
+      border: 1px solid #ffd0d0; background:#fff5f5; color:#d60000;
+      display:flex; align-items:center; justify-content:center;
+      font-size: 20px; cursor:pointer;
+    }
+    .trash:hover { background:#ffecec; }
+
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .muted { color:#666; font-size: 13px; }
   </style>
 </head>
 <body>
-  <h2>📌 我的清單（LIFF 測試頁）</h2>
+  <h2>📌 我的清單</h2>
+
   <div class="card">
-    <div>LIFF 狀態：<span id="status">初始化中…</span></div>
-    <div style="margin-top:8px">isInClient：<code id="inClient">-</code></div>
-    <div style="margin-top:8px">userId：<code id="userId">-</code></div>
+    <div class="row">
+      <div>LIFF 狀態：<span id="status">初始化中…</span></div>
+      <div class="muted">isInClient：<code id="inClient">-</code></div>
+      <div class="muted">userId：<code id="userId">-</code></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="loginBtn" style="display:none;">登入 LINE</button>
+      <button id="reloadBtn" style="display:none;">重新載入清單</button>
+      <button id="closeBtn" style="display:none;">關閉頁面</button>
+    </div>
+    <div id="msg" class="muted" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
-    <button id="loginBtn" style="display:none;">登入 LINE</button>
-    <button id="closeBtn" style="display:none;">關閉頁面</button>
+    <div class="row" style="justify-content:space-between">
+      <div>🛒 清單內容</div>
+      <div class="muted">共 <span id="count">0</span> 項</div>
+    </div>
+    <div id="list" class="list"></div>
   </div>
 
   <script>
-    const LIFF_ID = "2009075953-1UZ0h4p2"; // ← 換成你的 LIFF ID
+    // ✅ 你的 LIFF ID（如果之後換 LIFF，只改這裡）
+    const LIFF_ID = "2009075953-1UZ0h4p2";
+
+    // ✅ 你測試成功的 API
+    const GET_LIST_URL = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list";
+    const DELETE_BASE  = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/9cc8ce9b-9837-4a04-b46d-7c4f9b772ce2";
 
     const $ = (id) => document.getElementById(id);
+
+    function setMsg(t) { $("msg").textContent = t || ""; }
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;")
+        .replaceAll(">","&gt;").replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function renderList(items) {
+      const wrap = $("list");
+      wrap.innerHTML = "";
+      $("count").textContent = String(items.length);
+
+      if (!items.length) {
+        wrap.innerHTML = `<div class="muted" style="padding:10px">目前清單是空的。</div>`;
+        return;
+      }
+
+      for (const it of items) {
+        const pid = it.productId;
+        const name = escapeHtml(it.name);
+        const pricePromo = escapeHtml(it.pricePromo || "");
+        const tags = escapeHtml(it.tags || "");
+        const img = escapeHtml(it.imageUrl || "");
+        const createdAt = it.createdAt ? new Date(it.createdAt).toLocaleString() : "";
+
+        const el = document.createElement("div");
+        el.className = "item";
+        el.dataset.pid = String(pid);
+
+        el.innerHTML = `
+          <div class="thumb">
+            ${img ? `<img src="${img}" alt="">` : ``}
+          </div>
+          <div class="info">
+            <div class="name">${name}</div>
+            <div class="meta">${pricePromo}</div>
+            ${tags ? `<div class="tags">${tags}</div>` : ``}
+            ${createdAt ? `<div class="tags">加入時間：${escapeHtml(createdAt)}</div>` : ``}
+          </div>
+          <div class="actions">
+            <button class="trash" title="刪除" aria-label="刪除">🗑️</button>
+          </div>
+        `;
+
+        el.querySelector(".trash").onclick = async () => {
+          await deleteItem(pid, el);
+        };
+
+        wrap.appendChild(el);
+      }
+    }
+
+    async function fetchList(userId) {
+      setMsg("讀取清單中…");
+      $("reloadBtn").disabled = true;
+
+      const url = `${GET_LIST_URL}?userId=${encodeURIComponent(userId)}`;
+      const res = await fetch(url, { method: "GET" });
+
+      let data;
+      try { data = await res.json(); }
+      catch { throw new Error("GET 清單回傳不是 JSON，請檢查 n8n 回應格式"); }
+
+      // 兼容兩種回傳格式：[{items:...}] 或 {items:...}
+      const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data?.[0]?.items) ? data[0].items : []);
+      renderList(items);
+      setMsg("");
+      $("reloadBtn").disabled = false;
+    }
+
+    async function deleteItem(productId, cardEl) {
+      const userId = $("userId").textContent;
+      if (!userId || userId === "-" || userId.includes("尚未登入")) return;
+
+      const btn = cardEl.querySelector(".trash");
+      btn.disabled = true;
+
+      setMsg(`刪除商品 ${productId}…`);
+
+      const url = `${DELETE_BASE}/list/${encodeURIComponent(productId)}?userId=${encodeURIComponent(userId)}`;
+      const res = await fetch(url, { method: "DELETE" });
+
+      if (!res.ok) {
+        setMsg("刪除失敗，請稍後再試");
+        btn.disabled = false;
+        return;
+      }
+
+      // UI 直接移除卡片（快）
+      cardEl.remove();
+      $("count").textContent = String(document.querySelectorAll(".item").length);
+      setMsg("");
+    }
 
     async function main() {
       try {
@@ -36,7 +178,6 @@
         $("status").textContent = "✅ 初始化成功";
         $("inClient").textContent = String(liff.isInClient());
 
-        // 如果不是在 LINE App 內開，就需要 login
         if (!liff.isLoggedIn()) {
           $("loginBtn").style.display = "inline-block";
           $("loginBtn").onclick = () => liff.login();
@@ -47,10 +188,15 @@
         const profile = await liff.getProfile();
         $("userId").textContent = profile.userId;
 
+        $("reloadBtn").style.display = "inline-block";
+        $("reloadBtn").onclick = () => fetchList(profile.userId);
+
         if (liff.isInClient()) {
           $("closeBtn").style.display = "inline-block";
           $("closeBtn").onclick = () => liff.closeWindow();
         }
+
+        await fetchList(profile.userId);
       } catch (e) {
         $("status").textContent = "❌ 初始化失敗";
         const msg = (e && (e.message || e.toString())) || "unknown";
