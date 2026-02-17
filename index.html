@@ -135,6 +135,9 @@
       $("reloadBtn").disabled = true;
 
       const url = `${GET_LIST_URL}?userId=${encodeURIComponent(userId)}`;
+      console.log("GET URL =", url);
+      alert("GET URL = " + url);
+
       const res = await fetch(url, { method: "GET" });
 
       let data;
@@ -209,4 +212,5 @@
   </script>
 </body>
 </html>
+
 
