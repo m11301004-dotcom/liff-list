@@ -138,7 +138,13 @@
       console.log("GET URL =", url);
       alert("GET URL = " + url);
 
-      const res = await fetch(url, { method: "GET" });
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+          "Accept": "application/json",
+        },
+      });
 
       let data;
       try { data = await res.json(); }
@@ -161,7 +167,14 @@
       setMsg(`刪除商品 ${productId}…`);
 
       const url = `${DELETE_BASE}/list/${encodeURIComponent(productId)}?userId=${encodeURIComponent(userId)}`;
-      const res = await fetch(url, { method: "DELETE" });
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+          "Accept": "application/json",
+        },
+      });
+
 
       if (!res.ok) {
         setMsg("刪除失敗，請稍後再試");
@@ -212,5 +225,6 @@
   </script>
 </body>
 </html>
+
 
 
