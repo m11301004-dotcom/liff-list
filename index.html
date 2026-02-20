@@ -55,26 +55,52 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // ✅ Step1: 先做空的載入（不打 API）
+    // ⚠️ 換成你的 Production Webhook 基礎網址（不要含 userId）
+    const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list";
+    
     async function loadList(userId) {
       $("listHint").textContent = "載入中…";
       const itemsEl = $("items");
       itemsEl.innerHTML = "";
-
-      // placeholder：確認 userId/渲染沒問題
-      itemsEl.innerHTML = `
-        <div class="itemCard">
-          <div class="thumb"></div>
-          <div class="meta">
-            <div class="name">（Step 1 測試）已取得 userId</div>
-            <div class="sub"><code>${escapeHtml(userId)}</code></div>
-            <div class="sub muted">下一步會從 n8n 把商品清單拉回來</div>
-          </div>
-        </div>
-      `;
-      $("listHint").textContent = "已載入（測試）";
+    
+      try {
+        const res = await fetch(`${API_BASE}/list?userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+    
+        if (!data.ok || !Array.isArray(data.items)) {
+          throw new Error("API 回傳格式錯誤");
+        }
+    
+        if (data.items.length === 0) {
+          itemsEl.innerHTML = `<div class="muted">目前沒有商品</div>`;
+          $("listHint").textContent = "清單為空";
+          return;
+        }
+    
+        for (const item of data.items) {
+          const card = document.createElement("div");
+          card.className = "itemCard";
+    
+          card.innerHTML = `
+            <img class="thumb" src="${item.imageUrl || ''}" alt="">
+            <div class="meta">
+              <div class="name">${escapeHtml(item.name || '')}</div>
+              <div class="sub">${escapeHtml(item.pricePromo || '')}</div>
+              <div class="sub muted">${escapeHtml(item.tags || '')}</div>
+            </div>
+          `;
+    
+          itemsEl.appendChild(card);
+        }
+    
+        $("listHint").textContent = `共 ${data.items.length} 筆`;
+    
+      } catch (err) {
+        console.error(err);
+        itemsEl.innerHTML = `<div class="muted">載入失敗</div>`;
+        $("listHint").textContent = "錯誤";
+      }
     }
-
     function escapeHtml(s) {
       return String(s)
         .replaceAll("&", "&amp;")
@@ -119,3 +145,4 @@
   </script>
 </body>
 </html>
+
