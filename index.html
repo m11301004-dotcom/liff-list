@@ -7,59 +7,150 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Arial; padding: 16px; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; margin-top: 12px; }
-    code { background:#f6f6f6; padding:2px 6px; border-radius:6px; }
-    button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor: pointer; }
+    :root{
+      --card:#ffffff;
+      --border:#e9e9e9;
+      --text:#111;
+      --muted:#666;
+      --danger:#d32f2f;
+      --bg:#fafafa;
+    }
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Arial;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+    }
+    h2{ margin: 8px 0 12px; }
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    code{
+      background:#f3f3f3;
+      padding:2px 6px;
+      border-radius: 8px;
+      word-break: break-all;
+    }
+    .btn{
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background:#fff;
+      cursor:pointer;
+    }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .spacer{ flex:1; }
 
-    .listWrap { margin-top: 12px; }
-    .listHeader { display:flex; align-items:center; justify-content:space-between; gap: 12px; }
-    .muted { color:#666; font-size: 14px; }
-    .items { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
-    .itemCard { display:flex; gap:12px; border:1px solid #eee; border-radius:14px; padding:12px; }
-    .thumb { width:86px; height:86px; border-radius:12px; background:#f2f2f2; flex:0 0 auto; object-fit:cover; }
-    .meta { flex:1 1 auto; min-width:0; }
-    .name { font-weight:700; line-height:1.25; word-break: break-word; }
-    .sub { margin-top:6px; color:#444; font-size:14px; word-break: break-word; }
-    .err { color:#b00020; font-size: 13px; margin-top: 8px; white-space: pre-wrap; word-break: break-word; }
+    .listHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .muted{ color: var(--muted); font-size: 14px; }
+
+    .items{
+      display:flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .itemCard{
+      display:flex;
+      gap:12px;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      background:#fff;
+    }
+    .thumb{
+      width: 92px;
+      height: 92px;
+      border-radius: 14px;
+      background:#f1f1f1;
+      object-fit: cover;
+      flex: 0 0 auto;
+    }
+    .meta{
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .name{
+      font-weight: 800;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .sub{
+      margin-top: 6px;
+      font-size: 14px;
+      color:#333;
+      word-break: break-word;
+    }
+    .tags{
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      word-break: break-word;
+    }
+
+    .err{
+      margin-top: 10px;
+      color: var(--danger);
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
   </style>
 </head>
 
 <body>
   <h2>LIFF 測試頁</h2>
 
-  <div class="card">
+  <div class="panel">
     <div>狀態：<span id="status">初始化中…</span></div>
     <div style="margin-top:8px;">是否在 LINE App：<code id="inClient">-</code></div>
     <div style="margin-top:8px;">你的 userId：<code id="userId">-</code></div>
   </div>
 
-  <div class="card">
-    <button id="loginBtn" style="display:none;">登入 LINE</button>
-    <button id="closeBtn" style="display:none; margin-left:8px;">關閉 LIFF</button>
+  <div class="panel">
+    <div class="row">
+      <button id="loginBtn" class="btn" style="display:none;">登入 LINE</button>
+      <button id="closeBtn" class="btn" style="display:none;">關閉 LIFF</button>
+      <div class="spacer"></div>
+      <button id="reloadBtn" class="btn" style="display:none;">重新載入清單</button>
+    </div>
   </div>
 
-  <div class="card listWrap">
+  <div class="panel">
     <div class="listHeader">
       <div>🧾 我的清單</div>
       <div class="muted" id="listHint">尚未載入</div>
     </div>
+
     <div class="items" id="items"></div>
+
     <div class="err" id="errBox" style="display:none;"></div>
+    <div class="muted" id="debugBox" style="display:none; margin-top:8px;"></div>
   </div>
 
   <script>
-    // ✅ 換成你的 LIFF ID
+    // ✅ 你的 LIFF ID
     const LIFF_ID = "2009075953-1UZ0h4p2";
 
-    // ✅ 這裡一定要包含 webhook 的 UUID（你目前用的 9cc8...）
-    // 正式上線請用 production /webhook，不要用 /webhook-test
-    const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook";
+    // ✅ 改用你已確認能回 JSON 的 endpoint（重點）
+    // GET:  /webhook/list?userId=xxxx
+    const API_LIST_URL = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list";
 
     const $ = (id) => document.getElementById(id);
 
     function escapeHtml(s) {
-      return String(s)
+      return String(s ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
@@ -68,28 +159,54 @@
     }
 
     function showErr(msg) {
-      const box = $("errBox");
-      box.style.display = "block";
-      box.textContent = msg;
+      $("errBox").style.display = "block";
+      $("errBox").textContent = msg;
     }
     function clearErr() {
-      const box = $("errBox");
-      box.style.display = "none";
-      box.textContent = "";
+      $("errBox").style.display = "none";
+      $("errBox").textContent = "";
+    }
+
+    function showDebug(msg) {
+      const d = $("debugBox");
+      d.style.display = "block";
+      d.textContent = msg;
+    }
+
+    function renderItems(items) {
+      const el = $("items");
+      el.innerHTML = "";
+
+      if (!items || items.length === 0) {
+        el.innerHTML = `<div class="muted">目前沒有商品</div>`;
+        return;
+      }
+
+      for (const it of items) {
+        const card = document.createElement("div");
+        card.className = "itemCard";
+        card.innerHTML = `
+          <img class="thumb" src="${escapeHtml(it.imageUrl)}" alt="">
+          <div class="meta">
+            <div class="name">${escapeHtml(it.name)}</div>
+            <div class="sub">${escapeHtml(it.pricePromo)}</div>
+            <div class="tags">${escapeHtml(it.tags)}</div>
+          </div>
+        `;
+        el.appendChild(card);
+      }
     }
 
     async function loadList(userId) {
       $("listHint").textContent = "載入中…";
       clearErr();
 
-      const itemsEl = $("items");
-      itemsEl.innerHTML = "";
-
-      const url = `${API_BASE}/list?userId=${encodeURIComponent(userId)}`;
+      const url = `${API_LIST_URL}?userId=${encodeURIComponent(userId)}`;
+      showDebug(`API: ${url}`);
 
       try {
         const res = await fetch(url, { method: "GET" });
-        const text = await res.text(); // 先拿 text，避免非 JSON 直接爆
+        const text = await res.text(); // 先讀 text，避免非 JSON 直接爆
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}\nURL: ${url}\n\n${text.slice(0, 400)}`);
@@ -99,39 +216,23 @@
         try {
           data = JSON.parse(text);
         } catch (e) {
-          // 這裡就是你之前遇到的 Unexpected token '<'
           throw new Error(`回傳不是 JSON（可能打到 HTML 頁）\nURL: ${url}\n\n前 200 字：\n${text.slice(0, 200)}`);
         }
 
-        if (!data.ok || !Array.isArray(data.items)) {
+        // 你 n8n 回傳可能是 array: [ { ok:true, items:[...]} ]
+        if (Array.isArray(data)) data = data[0];
+
+        if (!data || data.ok !== true || !Array.isArray(data.items)) {
           throw new Error(`JSON 格式不符預期\nURL: ${url}\n\n收到：${text.slice(0, 400)}`);
         }
 
-        if (data.items.length === 0) {
-          itemsEl.innerHTML = `<div class="muted">目前沒有商品</div>`;
-          $("listHint").textContent = "清單為空";
-          return;
-        }
-
-        for (const item of data.items) {
-          const card = document.createElement("div");
-          card.className = "itemCard";
-          card.innerHTML = `
-            <img class="thumb" src="${escapeHtml(item.imageUrl || '')}" alt="">
-            <div class="meta">
-              <div class="name">${escapeHtml(item.name || '')}</div>
-              <div class="sub">${escapeHtml(item.pricePromo || '')}</div>
-              <div class="sub muted">${escapeHtml(item.tags || '')}</div>
-            </div>
-          `;
-          itemsEl.appendChild(card);
-        }
-
+        renderItems(data.items);
         $("listHint").textContent = `共 ${data.items.length} 筆`;
+
       } catch (err) {
         console.error(err);
         $("listHint").textContent = "錯誤";
-        itemsEl.innerHTML = `<div class="muted">載入失敗</div>`;
+        renderItems([]);
         showErr(String(err && err.message ? err.message : err));
       }
     }
@@ -152,12 +253,16 @@
         const profile = await liff.getProfile();
         $("userId").textContent = profile.userId;
 
+        $("reloadBtn").style.display = "inline-block";
+        $("reloadBtn").onclick = () => loadList(profile.userId);
+
         await loadList(profile.userId);
 
         if (liff.isInClient()) {
           $("closeBtn").style.display = "inline-block";
           $("closeBtn").onclick = () => liff.closeWindow();
         }
+
       } catch (e) {
         $("status").textContent = "❌ 初始化失敗";
         const msg = (e && (e.message || e.toString())) || "unknown";
@@ -170,4 +275,3 @@
   </script>
 </body>
 </html>
-
