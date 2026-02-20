@@ -56,7 +56,7 @@
     const $ = (id) => document.getElementById(id);
 
     // ⚠️ 換成你的 Production Webhook 基礎網址（不要含 userId）
-    const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list";
+    const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook";
     
     async function loadList(userId) {
       $("listHint").textContent = "載入中…";
@@ -145,4 +145,5 @@
   </script>
 </body>
 </html>
+
 
