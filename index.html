@@ -12,16 +12,15 @@
     code { background:#f6f6f6; padding:2px 6px; border-radius:6px; }
     button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor: pointer; }
 
-    /* ✅ Step1: 清單 UI 骨架 */
     .listWrap { margin-top: 12px; }
-    .listHeader { display:flex; align-items:center; justify-content:space-between; gap: 12px; }
+    .listHeader { display:flex; align-items:center; justify-content:space-between; }
     .muted { color:#666; font-size: 14px; }
     .items { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
     .itemCard { display:flex; gap:12px; border:1px solid #eee; border-radius:14px; padding:12px; }
-    .thumb { width:86px; height:86px; border-radius:12px; background:#f2f2f2; flex:0 0 auto; object-fit:cover; }
-    .meta { flex:1 1 auto; min-width:0; }
-    .name { font-weight:700; line-height:1.25; word-break: break-word; }
-    .sub { margin-top:6px; color:#444; font-size:14px; word-break: break-word; }
+    .thumb { width:86px; height:86px; border-radius:12px; background:#f2f2f2; object-fit:cover; }
+    .meta { flex:1; }
+    .name { font-weight:700; }
+    .sub { margin-top:6px; font-size:14px; }
   </style>
 </head>
 
@@ -36,10 +35,9 @@
 
   <div class="card">
     <button id="loginBtn" style="display:none;">登入 LINE</button>
-    <button id="closeBtn" style="display:none; margin-left:8px;">關閉 LIFF</button>
+    <button id="closeBtn" style="display:none;">關閉 LIFF</button>
   </div>
 
-  <!-- ✅ Step1: 我的清單區塊 -->
   <div class="card listWrap">
     <div class="listHeader">
       <div>🧾 我的清單</div>
@@ -48,102 +46,91 @@
     <div class="items" id="items"></div>
   </div>
 
-  <script>
-    // ⚠️ Step1 只做 UI/流程驗證：先不打 n8n API
-    // 請把這裡換成你的 LIFF ID
-    const LIFF_ID = "2009075953-1UZ0h4p2";
+<script>
+const LIFF_ID = "2009075953-1UZ0h4p2";
+const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook"; // ✅ 修正
 
-    const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 
-    // ⚠️ 換成你的 Production Webhook 基礎網址（不要含 userId）
-    const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook";
-    
-    async function loadList(userId) {
-      $("listHint").textContent = "載入中…";
-      const itemsEl = $("items");
-      itemsEl.innerHTML = "";
-    
-      try {
-        const res = await fetch(`${API_BASE}/list?userId=${encodeURIComponent(userId)}`);
-        const data = await res.json();
-    
-        if (!data.ok || !Array.isArray(data.items)) {
-          throw new Error("API 回傳格式錯誤");
-        }
-    
-        if (data.items.length === 0) {
-          itemsEl.innerHTML = `<div class="muted">目前沒有商品</div>`;
-          $("listHint").textContent = "清單為空";
-          return;
-        }
-    
-        for (const item of data.items) {
-          const card = document.createElement("div");
-          card.className = "itemCard";
-    
-          card.innerHTML = `
-            <img class="thumb" src="${item.imageUrl || ''}" alt="">
-            <div class="meta">
-              <div class="name">${escapeHtml(item.name || '')}</div>
-              <div class="sub">${escapeHtml(item.pricePromo || '')}</div>
-              <div class="sub muted">${escapeHtml(item.tags || '')}</div>
-            </div>
-          `;
-    
-          itemsEl.appendChild(card);
-        }
-    
-        $("listHint").textContent = `共 ${data.items.length} 筆`;
-    
-      } catch (err) {
-        console.error(err);
-        itemsEl.innerHTML = `<div class="muted">載入失敗</div>`;
-        $("listHint").textContent = "錯誤";
-      }
-    }
-    function escapeHtml(s) {
-      return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+async function loadList(userId) {
+  $("listHint").textContent = "載入中…";
+  $("items").innerHTML = "";
+
+  try {
+    const url = `${API_BASE}/list?userId=${encodeURIComponent(userId)}`;
+    const res = await fetch(url);
+    const text = await res.text();
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${text}`);
     }
 
-    async function main() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        $("status").textContent = "✅ 初始化成功";
-        $("inClient").textContent = String(liff.isInClient());
+    const data = JSON.parse(text);
 
-        if (!liff.isLoggedIn()) {
-          $("loginBtn").style.display = "inline-block";
-          $("loginBtn").onclick = () => liff.login();
-          $("userId").textContent = "(尚未登入)";
-          return;
-        }
-
-        const profile = await liff.getProfile();
-        $("userId").textContent = profile.userId;
-
-        // ✅ Step1: 拿到 userId 後先跑一次 UI 測試載入
-        await loadList(profile.userId);
-
-        if (liff.isInClient()) {
-          $("closeBtn").style.display = "inline-block";
-          $("closeBtn").onclick = () => liff.closeWindow();
-        }
-      } catch (e) {
-        $("status").textContent = "❌ 初始化失敗";
-        const msg = (e && (e.message || e.toString())) || "unknown";
-        alert("LIFF init error: " + msg);
-        console.error(e);
-      }
+    if (!data.ok || !Array.isArray(data.items)) {
+      throw new Error("API 回傳格式錯誤");
     }
 
-    main();
-  </script>
+    if (data.items.length === 0) {
+      $("items").innerHTML = `<div class="muted">目前沒有商品</div>`;
+      $("listHint").textContent = "清單為空";
+      return;
+    }
+
+    for (const item of data.items) {
+      const card = document.createElement("div");
+      card.className = "itemCard";
+
+      card.innerHTML = `
+        <img class="thumb" src="${item.imageUrl || ''}">
+        <div class="meta">
+          <div class="name">${item.name || ''}</div>
+          <div class="sub">${item.pricePromo || ''}</div>
+          <div class="sub muted">${item.tags || ''}</div>
+        </div>
+      `;
+
+      $("items").appendChild(card);
+    }
+
+    $("listHint").textContent = `共 ${data.items.length} 筆`;
+
+  } catch (err) {
+    console.error(err);
+    $("items").innerHTML = `<div class="muted">${err.message}</div>`;
+    $("listHint").textContent = "錯誤";
+  }
+}
+
+async function main() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    $("status").textContent = "✅ 初始化成功";
+    $("inClient").textContent = String(liff.isInClient());
+
+    if (!liff.isLoggedIn()) {
+      $("loginBtn").style.display = "inline-block";
+      $("loginBtn").onclick = () => liff.login();
+      return;
+    }
+
+    const profile = await liff.getProfile();
+    $("userId").textContent = profile.userId;
+
+    await loadList(profile.userId);
+
+    if (liff.isInClient()) {
+      $("closeBtn").style.display = "inline-block";
+      $("closeBtn").onclick = () => liff.closeWindow();
+    }
+
+  } catch (e) {
+    $("status").textContent = "❌ 初始化失敗";
+    alert(e.message);
+  }
+}
+
+main();
+</script>
 </body>
 </html>
-
-
