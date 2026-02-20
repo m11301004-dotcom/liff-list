@@ -1,213 +1,225 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>我的清單（LIFF）</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>我的清單（LIFF）</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
-  <style>
-    body{
-      margin:0;
-      background:#f6f7fb;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC",Arial,sans-serif;
-    }
-    .wrap{
-      max-width:520px;
-      margin:0 auto;
-      padding:18px 14px;
-    }
-    h1{
-      font-size:22px;
-      font-weight:800;
-    }
-    .panel{
-      background:#fff;
-      border-radius:14px;
-      padding:14px;
-      margin-bottom:14px;
-      box-shadow:0 6px 18px rgba(0,0,0,.06);
-    }
-    .mono{
-      font-family:monospace;
-      background:#f3f4f6;
-      padding:6px;
-      border-radius:8px;
-      font-size:12px;
-      word-break:break-all;
-    }
-    .btn{
-      padding:8px 12px;
-      border-radius:10px;
-      border:1px solid #ddd;
-      background:#fff;
-      font-weight:700;
-    }
-    .card{
-      display:grid;
-      grid-template-columns:90px 1fr;
-      gap:12px;
-      background:#fff;
-      padding:12px;
-      border-radius:14px;
-      box-shadow:0 6px 18px rgba(0,0,0,.06);
-      margin-bottom:12px;
-    }
-    .img{
-      width:90px;
-      height:90px;
-      object-fit:cover;
-      border-radius:10px;
-      border:1px solid #eee;
-    }
-    .title{
-      font-weight:800;
-      margin-bottom:6px;
-    }
-    .meta{
-      font-size:13px;
-      color:#666;
-    }
-    .err{
-      background:#fff1f2;
-      color:#b91c1c;
-      padding:10px;
-      border-radius:10px;
-      font-size:13px;
-      white-space:pre-wrap;
-      margin-top:10px;
-    }
-  </style>
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC";
+  background:#f5f6fa;
+}
+.wrap{
+  max-width:760px;
+  margin:auto;
+  padding:20px;
+}
+h1{margin:10px 0 20px;font-size:28px;}
+.panel{
+  background:white;
+  padding:15px;
+  border-radius:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,.06);
+  margin-bottom:20px;
+}
+.mono{
+  background:#f1f2f6;
+  padding:8px;
+  border-radius:10px;
+  font-size:13px;
+  word-break:break-all;
+}
+.cards{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.card{
+  display:flex;
+  gap:12px;
+  background:white;
+  border-radius:18px;
+  padding:12px;
+  box-shadow:0 10px 25px rgba(0,0,0,.06);
+  align-items:center;
+}
+.thumb{
+  width:110px;
+  height:110px;
+  border-radius:14px;
+  overflow:hidden;
+  flex-shrink:0;
+}
+.thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.content{
+  flex:1;
+}
+.title{
+  font-size:18px;
+  font-weight:800;
+  margin-bottom:6px;
+}
+.line{
+  font-size:14px;
+  color:#666;
+  margin-bottom:4px;
+}
+.trash{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  background:#ffeaea;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+.trash:hover{
+  background:#ffd6d6;
+}
+button{
+  padding:8px 12px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  background:white;
+}
+.error{
+  color:red;
+  font-size:13px;
+  white-space:pre-wrap;
+}
+</style>
 </head>
 
 <body>
 <div class="wrap">
+<h1>我的清單（LIFF）</h1>
 
-  <h1>我的清單（LIFF）</h1>
+<div class="panel">
+<div>狀態：<span id="status">初始化中...</span></div>
+<div>你的 userId：</div>
+<div id="userId" class="mono">(尚未取得)</div>
+<br>
+<button onclick="loadList()">重新載入清單</button>
+<div id="error" class="error"></div>
+</div>
 
-  <div class="panel">
-    <div>狀態：<span id="status">初始化中…</span></div>
-    <div style="margin-top:8px;">你的 userId：</div>
-    <div class="mono" id="userIdBox">(尚未取得)</div>
-    <div style="margin-top:12px;">
-      <button class="btn" id="reloadBtn">重新載入清單</button>
-    </div>
-    <div id="errorBox"></div>
-  </div>
-
-  <div id="listArea"></div>
-
+<div class="cards" id="cards"></div>
 </div>
 
 <script>
-/***************
- * 改這兩個
- ***************/
-const LIFF_ID = "2009075953-1UZ0h4p2";
-const API_LIST_URL = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list";
 
-let currentUserId = "";
+const LIFF_ID = "2009075953-1UZ0h4p2"
 
-function showError(text){
-  document.getElementById("errorBox").innerHTML =
-    `<div class="err">${text}</div>`;
-}
+const GET_API =
+"https://subdepressed-thistly-lee.ngrok-free.dev/webhook/list"
 
-function clearError(){
-  document.getElementById("errorBox").innerHTML = "";
-}
+const DELETE_API =
+"https://subdepressed-thistly-lee.ngrok-free.dev/webhook/9cc8ce9b-9837-4a04-b46d-7c4f9b772ce2"
 
-function renderList(items){
-  const area = document.getElementById("listArea");
+let CURRENT_USER = ""
 
-  if(!items || items.length === 0){
-    area.innerHTML = `<div class="panel">目前沒有商品</div>`;
-    return;
-  }
-
-  area.innerHTML = items.map(it => `
-    <div class="card">
-      <img class="img" src="${it.imageUrl || ''}">
-      <div>
-        <div class="title">${it.name || ''}</div>
-        <div class="meta">
-          ${it.pricePromo ? `💵 ${it.pricePromo}<br>` : ''}
-          ${it.tags ? `🏷️ ${it.tags}<br>` : ''}
-          ${it.createdAt ? `🕒 ${new Date(it.createdAt).toLocaleString()}<br>` : ''}
-        </div>
-      </div>
-    </div>
-  `).join("");
-}
-
-async function fetchJson(url){
-  const res = await fetch(url, {
+async function fetchJson(url, options={}){
+  const res = await fetch(url,{
+    ...options,
     headers:{
-      "ngrok-skip-browser-warning":"true",
-      "Accept":"application/json"
+      'ngrok-skip-browser-warning':'1',
+      ...(options.headers||{})
     }
-  });
+  })
+  const text = await res.text()
+  try{
+    return {ok:true,data:JSON.parse(text)}
+  }catch{
+    return {ok:false,error:text.slice(0,200)}
+  }
+}
 
-  const text = await res.text();
+async function deleteItem(productId){
+  const url = `${DELETE_API}/list/${productId}`
+  const r = await fetchJson(url,{method:'DELETE'})
+  if(!r.ok){
+    throw new Error(r.error)
+  }
+}
 
-  if(!text.trim().startsWith("{") && !text.trim().startsWith("[")){
-    throw new Error(
-`回傳不是 JSON
-URL: ${url}
+function createCard(item){
+  const card=document.createElement("div")
+  card.className="card"
 
-前200字:
-${text.slice(0,200)}`
-    );
+  card.innerHTML=`
+  <div class="thumb">
+    <img src="${item.imageUrl||''}">
+  </div>
+  <div class="content">
+    <div class="title">${item.name||''}</div>
+    <div class="line">💵 ${item.pricePromo||''}</div>
+    <div class="line">🏷️ ${item.tags||''}</div>
+    <div class="line">🕒 ${item.createdAt||''}</div>
+  </div>
+  <div class="trash">🗑️</div>
+  `
+
+  card.querySelector(".trash").onclick=async()=>{
+    if(!confirm("確定刪除？"))return
+    try{
+      await deleteItem(item.productId)
+      await loadList()
+    }catch(e){
+      document.getElementById("error").textContent=e.message
+    }
   }
 
-  return JSON.parse(text);
+  return card
 }
 
 async function loadList(){
-  if(!currentUserId){
-    showError("尚未取得 userId");
-    return;
+  if(!CURRENT_USER)return
+
+  document.getElementById("error").textContent=""
+  const r=await fetchJson(`${GET_API}?userId=${CURRENT_USER}`)
+  if(!r.ok){
+    document.getElementById("error").textContent=r.error
+    return
   }
 
-  const url = `${API_LIST_URL}?userId=${encodeURIComponent(currentUserId)}`;
+  const payload=Array.isArray(r.data)?r.data[0]:r.data
+  const items=payload.items||[]
 
-  try{
-    clearError();
-    const data = await fetchJson(url);
-    const payload = Array.isArray(data) ? data[0] : data;
-    renderList(payload.items || []);
-  }catch(e){
-    renderList([]);
-    showError(e.message);
-  }
+  const container=document.getElementById("cards")
+  container.innerHTML=""
+
+  items.forEach(i=>{
+    container.appendChild(createCard(i))
+  })
 }
 
 async function init(){
   try{
-    await liff.init({ liffId: LIFF_ID });
-    document.getElementById("status").innerText = "✅ 初始化成功";
+    await liff.init({liffId:LIFF_ID})
+    document.getElementById("status").textContent="初始化成功"
 
-    if(!liff.isLoggedIn()){
-      liff.login();
-      return;
-    }
+    const profile=await liff.getProfile()
+    CURRENT_USER=profile.userId
+    document.getElementById("userId").textContent=CURRENT_USER
 
-    const profile = await liff.getProfile();
-    currentUserId = profile.userId;
-    document.getElementById("userIdBox").innerText = currentUserId;
-
-    loadList();
+    loadList()
 
   }catch(e){
-    document.getElementById("status").innerText = "❌ 初始化失敗";
-    showError(e.message);
+    document.getElementById("status").textContent="初始化失敗"
+    document.getElementById("error").textContent=e.message
   }
 }
 
-document.getElementById("reloadBtn").onclick = loadList;
+init()
 
-init();
 </script>
 </body>
 </html>
