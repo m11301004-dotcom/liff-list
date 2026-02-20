@@ -202,13 +202,13 @@
 
   // ✅ 一定要貼「Production URL 的 base」(含 UUID)：
   // 例：https://subdepressed-thistly-lee.ngrok-free.dev/webhook/9cc8ce9b-9837-4a04-b46d-7c4f9b772ce2
-  const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook/YOUR_WEBHOOK_UUID";
+  const API_BASE = "https://subdepressed-thistly-lee.ngrok-free.dev/webhook";
 
   // 你的 n8n 端如果是：
   // GET  /list?userId=...
   // DELETE /list/:productId?userId=...
   const API_LIST_URL = `${API_BASE}/list`;
-  const API_DELETE_URL = (productId) => `${API_BASE}/list/${encodeURIComponent(productId)}`;
+  const API_DELETE_URL = (productId) => `${API_BASE}/9cc8ce9b-9837-4a04-b46d-7c4f9b772ce2/list/${encodeURIComponent(productId)}`;
 
   let currentUserId = "";
 
@@ -379,3 +379,4 @@ ${text.slice(0,200)}`
 </script>
 </body>
 </html>
+
