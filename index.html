@@ -216,7 +216,7 @@
         try {
           data = JSON.parse(text);
         } catch (e) {
-          throw new Error(`回傳不是 JSON（可能打到 HTML 頁）\nURL: ${url}\n\n前 200 字：\n${text.slice(0, 1000)}`);
+          throw new Error(`回傳不是 JSON（可能打到 HTML 頁）\nURL: ${url}\n\n前 200 字：\n${text.slice(0, 10000)}`);
         }
 
         // 你 n8n 回傳可能是 array: [ { ok:true, items:[...]} ]
@@ -275,4 +275,5 @@
   </script>
 </body>
 </html>
+
 
