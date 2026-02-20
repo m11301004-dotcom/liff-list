@@ -143,7 +143,8 @@ async function fetchJson(url, options={}){
 }
 
 async function deleteItem(productId){
-  const url = `${DELETE_API}/list/${productId}`
+  // ✅ 帶 userId，符合你現在 n8n delete 的輸入
+  const url = `${DELETE_API}/list/${productId}?userId=${encodeURIComponent(CURRENT_USER)}`
   const r = await fetchJson(url,{method:'DELETE'})
   if(!r.ok){
     throw new Error(r.error)
@@ -171,7 +172,7 @@ function createCard(item){
     if(!confirm("確定刪除？"))return
     try{
       await deleteItem(item.productId)
-      await loadList()
+      await loadList() // 最穩：重抓一次，確保 UI 與 Sheet 同步
     }catch(e){
       document.getElementById("error").textContent=e.message
     }
@@ -184,7 +185,7 @@ async function loadList(){
   if(!CURRENT_USER)return
 
   document.getElementById("error").textContent=""
-  const r=await fetchJson(`${GET_API}?userId=${CURRENT_USER}`)
+  const r=await fetchJson(`${GET_API}?userId=${encodeURIComponent(CURRENT_USER)}`)
   if(!r.ok){
     document.getElementById("error").textContent=r.error
     return
