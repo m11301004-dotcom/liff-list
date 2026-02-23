@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>我的清單（LIFF）</title>
+<title>我的清單🛒</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
@@ -205,7 +205,7 @@ async function loadList(){
 async function init(){
   try{
     await liff.init({liffId:LIFF_ID})
-    document.getElementById("status").textContent="初始化成功"
+    document.getElementById("status").textContent="登入成功"
 
     const profile=await liff.getProfile()
     CURRENT_USER=profile.userId
@@ -224,4 +224,5 @@ init()
 </script>
 </body>
 </html>
+
 
